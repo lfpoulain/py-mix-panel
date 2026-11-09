@@ -1,0 +1,70 @@
+name: Release
+
+# Un tag vX.Y.Z (créé par tools/release.py) compile l'installateur Windows et publie la release.
+# Lancé à la main (onglet Actions), il compile seulement et met l'installateur en artefact.
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+
+      - name: Dépendances
+        run: pip install -r requirements-build.txt
+
+      - name: Tests
+        run: python tests/test_core.py
+
+      - name: Version
+        id: v
+        shell: bash
+        run: |
+          V=$(python -c "import pymixpanel; print(pymixpanel.__version__)")
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v$V" ]]; then
+            echo "::error::Le tag ${GITHUB_REF_NAME} ne correspond pas à pymixpanel.__version__ ($V)"
+            exit 1
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ISCC -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Compilation de l'installateur
+        run: python tools/build_exe.py --version ${{ steps.v.outputs.version }}
+
+      - name: Artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MixPanel-${{ steps.v.outputs.version }}-setup
+          path: dist/*-setup.exe
+
+      - name: Publication de la release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/release_notes.py "${{ steps.v.outputs.version }}" > notes.md
+          gh release create "${GITHUB_REF_NAME}" dist/*-setup.exe \
+            --title "MixPanel ${{ steps.v.outputs.version }}" \
+            --notes-file notes.md

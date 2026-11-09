@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# données personnelles : tes profils et préférences restent sur ton PC
+profiles/
+settings.json
+*.ctrl
+!tests/fixtures/*.ctrl
+
+# build de l exe
+build/
+dist/
