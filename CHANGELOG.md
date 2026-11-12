@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## 1.2.1 — 2026-11-12
 
 ### Instance unique et fermeture
 - **Une seule instance** de MixPanel à la fois : relancer l'exe ramène la fenêtre existante au premier plan au lieu d'en ouvrir une seconde (deux instances se disputaient la X-Touch et vMix).
