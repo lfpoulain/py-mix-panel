@@ -10,6 +10,7 @@ from pymixpanel.config import (Profile, list_profiles, load_settings, migrate_le
 from pymixpanel.engine import Engine
 from pymixpanel.importer import import_ctrl
 from pymixpanel.midi_io import MidiLink
+from pymixpanel.single_instance import InstanceServer, notify_running_instance
 from pymixpanel.ui.main_window import MainWindow
 from pymixpanel.ui.theme import QSS
 from pymixpanel.vmix import VmixClient
@@ -43,6 +44,10 @@ def main():
     app.setStyle("Fusion")
     app.setStyleSheet(QSS)
 
+    if notify_running_instance():   # MixPanel tourne déjà : on le ramène au premier plan et on s'arrête
+        return
+    instance = InstanceServer(app)
+
     migrate_legacy()   # profils d'une ancienne version (à côté de l'exe ou du projet)
     profile = initial_profile(sys.argv)
     settings = load_settings()
@@ -53,6 +58,8 @@ def main():
     vmix = VmixClient(profile.vmix_host, profile.vmix_port, profile.poll_ms)
     engine = Engine(profile, midi, vmix)
     win = MainWindow(engine)
+    instance.activated.connect(win.bring_to_front)
+    app.commitDataRequest.connect(win.allow_quit)   # fin de session Windows : ne pas s'opposer à l'arrêt
     win.show()
     midi.start()
     vmix.start()

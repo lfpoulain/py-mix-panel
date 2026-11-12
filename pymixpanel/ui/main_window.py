@@ -8,7 +8,7 @@ from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout,
                                QInputDialog, QLabel, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
-                               QPushButton, QVBoxLayout, QWidget)
+                               QPushButton, QSystemTrayIcon, QVBoxLayout, QWidget)
 
 from .. import APP_NAME, __version__
 from ..config import Profile, list_profiles, load_settings, profile_path, save_settings
@@ -127,6 +127,22 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+L"), self, activated=self.lock_btn.click)
         QShortcut(QKeySequence(Qt.Key_Delete), self,
                   activated=lambda: self.surface.sel and engine.set_mapping(self.surface.sel, None))
+        QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.quit_app)
+
+        # La croix réduit la fenêtre : on ne quitte que par l'icône de la zone de notification ou Ctrl+Q.
+        self._quitting = False
+        self.tray = QSystemTrayIcon(app_icon(), self)
+        self.tray.setToolTip(APP_NAME)
+        tray_menu = QMenu(self)
+        tray_menu.addAction("Afficher MixPanel", self.bring_to_front)
+        tray_menu.addSeparator()
+        tray_menu.addAction("Quitter", self._quit_from_tray)
+        self.tray.setContextMenu(tray_menu)
+        self.tray.activated.connect(
+            lambda reason: reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick)
+            and self.bring_to_front())
+        self.tray.show()
+
         self._refresh_profiles()
         self._update_title()
         self._vmix_version = ""
@@ -408,12 +424,40 @@ class MainWindow(QMainWindow):
             self._refresh_profiles()
             self._update_title()
 
+    def bring_to_front(self):
+        """Restaure la fenêtre (réduite ou derrière les autres) et lui donne le focus."""
+        self.setWindowState((self.windowState() & ~Qt.WindowMinimized) | Qt.WindowActive)
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def allow_quit(self, *_):
+        """Autorise la fermeture réelle (fin de session Windows, mise à jour…)."""
+        self._quitting = True
+
+    def quit_app(self):
+        """Quitte vraiment (après la confirmation éventuelle du verrou)."""
+        self._quitting = True
+        self.close()
+        if self.isVisible():   # fermeture refusée
+            self._quitting = False
+
+    def _quit_from_tray(self):
+        self.bring_to_front()   # pour que la confirmation éventuelle soit visible
+        self.quit_app()
+
     def closeEvent(self, ev):
+        if not self._quitting:   # clic sur la croix : on réduit au lieu de quitter
+            ev.ignore()
+            self.showMinimized()
+            return
         if self.engine.locked and QMessageBox.question(
                 self, "Quitter", "MixPanel est verrouillé (direct en cours ?).\nQuitter quand même ?") \
                 != QMessageBox.Yes:
+            self._quitting = False
             ev.ignore()
             return
+        self.tray.hide()
         if self.engine.ducker.active:
             # ne jamais laisser la musique baissée en quittant
             self.engine.ducker.release()

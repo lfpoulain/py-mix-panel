@@ -137,4 +137,4 @@ class UpdateController(QObject):
         except OSError as ex:
             QMessageBox.warning(self.win, "Mise à jour", f"L'installateur n'a pas pu démarrer :\n{ex}")
             return
-        self.win.close()
+        self.win.quit_app()

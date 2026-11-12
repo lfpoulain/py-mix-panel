@@ -1,5 +1,11 @@
 # Journal des versions
 
+## Non publié
+
+### Instance unique et fermeture
+- **Une seule instance** de MixPanel à la fois : relancer l'exe ramène la fenêtre existante au premier plan au lieu d'en ouvrir une seconde (deux instances se disputaient la X-Touch et vMix).
+- La croix de la fenêtre **réduit** MixPanel au lieu de le quitter. Pour quitter vraiment : clic droit sur l'icône de la zone de notification → **Quitter**, ou **Ctrl+Q**. Les mises à jour automatiques et l'arrêt de session Windows ferment toujours l'app normalement.
+
 ## 1.2.0 — 2026-11-09
 
 ### Mise à jour dans l'app
