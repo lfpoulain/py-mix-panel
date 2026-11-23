@@ -29,7 +29,7 @@ jobs:
         run: pip install -r requirements-build.txt
 
       - name: Tests
-        run: python tests/test_core.py
+        run: python tests/test_core.py && python tests/test_deck.py
 
       - name: Version
         id: v

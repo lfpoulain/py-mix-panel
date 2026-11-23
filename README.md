@@ -46,6 +46,7 @@ envois Master / A / B).
 | 🩺 **Diagnostic** | Un assistant vérifie en une minute les LED, anneaux et moteurs, puis chaque bouton, fader et encodeur. |
 | 🔌 **Plug & play** | Reconnexion automatique de la X-Touch et de vMix. Une source recréée dans vMix est retrouvée par son nom. |
 | 📥 **Import Central Control** | Tes shows `.ctrl` sont convertis en un clic. |
+| 📡 **Stream Deck** | API locale `/api/deck` pour py-livedeck : scènes, macros, ducking, page, verrou et mode de la X-Touch sur tes touches, avec leur état en direct. |
 
 <table>
 <tr>
@@ -95,6 +96,7 @@ Au premier démarrage, un profil vide est créé. Clique **Importer** pour repre
 |---|---|
 | 📘 [Guide d'utilisation](docs/guide.md) | Prise en main, associations, encodeurs, scènes, macros, ducking, réglages, dépannage |
 | 🎹 [Référence MIDI X-Touch](docs/xtouch-midi.md) | Correspondance des contrôles, retours LED et moteurs, apprentissage MIDI |
+| 📡 [API Stream Deck](docs/api.md) | Piloter MixPanel depuis py-livedeck ou un script : routes, touches, commandes, flux en direct |
 | 🧱 [Architecture](docs/architecture.md) | Organisation du code et flux de données, pour faire évoluer l'app |
 | 🚀 [Publier une version](docs/release.md) | Compiler l'installateur et publier une release en une commande |
 | 📝 [Journal des versions](CHANGELOG.md) | Historique des changements |
@@ -114,6 +116,8 @@ py-mix-panel/
 │   ├── xtouch.py           # description de la X-Touch Compact
 │   ├── importer.py         # import Central Control (.ctrl)
 │   ├── config.py           # profils JSON
+│   ├── deck.py             # API Stream Deck : état, touches, commandes
+│   ├── api.py              # serveur HTTP local (/api/deck, flux SSE)
 │   └── ui/                 # interface PySide6
 ├── profiles/               # tes profils (non versionnés, ils restent sur ton PC)
 ├── tools/

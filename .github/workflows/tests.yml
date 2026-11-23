@@ -22,4 +22,4 @@ jobs:
       - name: Lint
         run: python -m pyflakes pymixpanel tests tools main.py
       - name: Tests
-        run: python tests/test_core.py
+        run: python tests/test_core.py && python tests/test_deck.py

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QFileDialog, 
                                QPushButton, QSystemTrayIcon, QVBoxLayout, QWidget)
 
 from .. import APP_NAME, __version__
+from ..api import ApiService, api_settings
 from ..config import Profile, list_profiles, load_settings, profile_path, save_settings
 from ..importer import import_ctrl
 from . import theme as T
@@ -153,6 +154,9 @@ class MainWindow(QMainWindow):
         self.updates.check_later()
         if load_settings().get("locked"):   # le verrou survit à un redémarrage en plein direct
             engine.set_locked(True)
+        # API Stream Deck (/api/deck) pour py-livedeck : fermée tant qu'on ne l'ouvre pas
+        self.api = ApiService(engine, on_lock=self._save_lock)
+        self.apply_api()
 
     # -- en-tête ------------------------------------------------------------------
     def _header(self) -> QFrame:
@@ -262,9 +266,18 @@ class MainWindow(QMainWindow):
                 self.lock_btn.setChecked(True)
                 return
         self.engine.set_locked(on)
+        self._save_lock(on)
+
+    @staticmethod
+    def _save_lock(on: bool):
         s = load_settings()
         s["locked"] = on
         save_settings(s)
+
+    def apply_api(self):
+        error = self.api.apply(api_settings(load_settings()))
+        if error:
+            self._log(f"⚠ API Stream Deck : {error}")
 
     def _apply_lock(self, on: bool):
         self.lock_btn.setChecked(on)
@@ -423,6 +436,7 @@ class MainWindow(QMainWindow):
             save_settings(s)
             self._refresh_profiles()
             self._update_title()
+            self.apply_api()
 
     def bring_to_front(self):
         """Restaure la fenêtre (réduite ou derrière les autres) et lui donne le focus."""
@@ -458,6 +472,7 @@ class MainWindow(QMainWindow):
             ev.ignore()
             return
         self.tray.hide()
+        self.api.stop()
         if self.engine.ducker.active:
             # ne jamais laisser la musique baissée en quittant
             self.engine.ducker.release()

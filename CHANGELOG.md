@@ -1,5 +1,12 @@
 # Journal des versions
 
+## Non publié
+
+### Pilotage depuis un Stream Deck (py-livedeck)
+- MixPanel expose l'**API Stream Deck commune** de l'écosystème (`/api/deck`, celle d'orchestream-v2) : py-livedeck dessine les touches que MixPanel décrit lui-même, avec leur état en direct.
+- Touches : rappel de chaque **scène** (allumée quand la console y est), lancement de chaque **macro**, **ducking**, **page A / B**, **verrouillage** et **mode de la X-Touch**, plus l'état de vMix et de la console. Une scène ou une macro créée dans MixPanel apparaît toute seule.
+- **Réglages → Pilotage à distance** : API fermée par défaut, port (5085), « Ce poste uniquement », jeton facultatif. Voir [docs/api.md](docs/api.md).
+
 ## 1.2.1 — 2026-11-12
 
 ### Instance unique et fermeture

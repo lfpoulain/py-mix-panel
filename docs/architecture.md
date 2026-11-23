@@ -35,6 +35,8 @@ flowchart LR
 | `pymixpanel/engine.py` | Cœur de l'app : routage MIDI, apprentissage, protection des moteurs, encodeurs crantés, calcul des retours, glisser-déposer, sources retrouvées par leur nom |
 | `pymixpanel/automation.py` | `SceneBook` (capture, rappel, correspondance), `MacroRunner` (étapes et pauses planifiées), `Ducker` (détection de parole, baisse et remontée) |
 | `pymixpanel/importer.py` | Conversion d'un show Central Control `.ctrl` en profil |
+| `pymixpanel/deck.py` | API Stream Deck commune (`/api/deck`) : état, touches et commandes (fonctions pures), `DeckControl` qui lit le moteur et exécute les commandes |
+| `pymixpanel/api.py` | Serveur HTTP local sans dépendance : routage, jeton facultatif, flux SSE. `ApiService` fait passer chaque requête sur le fil de l'interface, qui possède le moteur |
 | `pymixpanel/config.py` | `Profile` (dataclass) ⇄ JSON dans `%APPDATA%\MixPanel\profiles`, plus `settings.json` (dernier profil ouvert) et migration des anciens emplacements |
 | `pymixpanel/ui/` | Fenêtre, surface dessinée à la main (`surface.py`), inspecteur, panneau de gauche, formulaires de paramètres partagés, éditeur de macros, réglages, thème |
 
@@ -126,3 +128,5 @@ puis vérifie de bout en bout :
 | `test_ring_shows_push_state` | Anneau témoin de l'appui : plein (27), éteint, clignotant (28), pendant l'appui pour une action sans état |
 | `test_ducking_without_setvolumefade` | Ducking fonctionnel même si SetVolumeFade ne fait rien (fondu fait par MixPanel) |
 | `test_console_mode_mc_and_back` | Mode Mackie : MixPanel en pause (ni actions, ni retours), puis retour au mode standard |
+
+`tests/test_deck.py` vérifie l'API Stream Deck : champs exacts des touches, patch vide quand rien ne change, erreurs (jamais `404 NOT_FOUND`), jeton, et un vrai flux SSE sur `127.0.0.1` piloté par le moteur et le faux vMix.

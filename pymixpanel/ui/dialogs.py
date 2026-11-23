@@ -1,6 +1,8 @@
 """Fenêtre de réglages du profil."""
 from __future__ import annotations
 
+import secrets
+
 import mido
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -8,7 +10,8 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QMessageBox, QDialog, QDial
                                QLabel, QLineEdit, QPushButton, QSpinBox, QVBoxLayout)
 
 from .. import actions as A
-from ..config import APP_DIR, PROFILES_DIR, Profile
+from ..api import api_settings, local_ip
+from ..config import APP_DIR, PROFILES_DIR, Profile, load_settings, save_settings
 from ..midi_io import list_ports
 from .updates import auto_check_enabled, set_auto_check
 
@@ -130,6 +133,7 @@ class SettingsDialog(QDialog):
             c.setCurrentIndex(max(0, c.findData(cur)))
             self.rows.append(c)
             form.addRow(f"Ligne de boutons {i + 1}", c)
+        self._api_section(form, getattr(parent, "api", None))
         form.addRow(_section("DONNÉES"))
         data = QHBoxLayout()
         path = QLabel(str(APP_DIR))
@@ -165,6 +169,63 @@ class SettingsDialog(QDialog):
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         lay.addWidget(bb)
+
+    def _api_section(self, form: QFormLayout, service):
+        """Pilotage à distance : l'API Stream Deck (/api/deck) lue par py-livedeck."""
+        cfg = api_settings(load_settings())
+        form.addRow(_section("PILOTAGE À DISTANCE (STREAM DECK)"))
+        self.api_on = QCheckBox("Ouvrir l'API locale (py-livedeck, scripts)")
+        self.api_on.setChecked(cfg["enabled"])
+        self.api_on.setToolTip("Scènes, macros, ducking, page, verrou et mode de la X-Touch "
+                               "pilotables depuis un Stream Deck")
+        form.addRow("", self.api_on)
+        row = QHBoxLayout()
+        self.api_port = _spin(1, 65535, cfg["port"])
+        row.addWidget(self.api_port)
+        self.api_local = QCheckBox("Ce poste uniquement")
+        self.api_local.setChecked(cfg["localOnly"])
+        self.api_local.setToolTip("Décoché : l'API est joignable depuis le réseau local")
+        row.addWidget(self.api_local)
+        row.addStretch(1)
+        form.addRow("Port", row)
+        tok = QHBoxLayout()
+        self.api_token = QLineEdit(cfg["token"])
+        self.api_token.setPlaceholderText("Vide : accès libre (réseau de confiance)")
+        self.api_token.setToolTip("Rempli : chaque requête doit porter « Authorization: Bearer <jeton> »")
+        tok.addWidget(self.api_token, 1)
+        gen = QPushButton("Générer")
+        gen.clicked.connect(lambda: self.api_token.setText(secrets.token_urlsafe(24)))
+        tok.addWidget(gen)
+        form.addRow("Jeton", tok)
+        self.api_url = QLabel()
+        self.api_url.setObjectName("Muted")
+        self.api_url.setTextInteractionFlags(self.api_url.textInteractionFlags() | Qt.TextSelectableByMouse)
+        form.addRow("Adresse", self.api_url)
+        running = service.url() if service else ""
+        error = service.server.error if service and cfg["enabled"] and not running else ""
+
+        def show():
+            on = self.api_on.isChecked()
+            for w in (self.api_port, self.api_local, self.api_token, gen):
+                w.setEnabled(on)
+            if not on:
+                self.api_url.setText("API fermée")
+                return
+            host = "127.0.0.1" if self.api_local.isChecked() else local_ip()
+            text = f"http://{host}:{self.api_port.value()}  (à coller dans py-livedeck)"
+            if error and self.api_port.value() == cfg["port"]:
+                text += f"\n⚠ {error}"
+            self.api_url.setText(text)
+
+        for sig in (self.api_on.toggled, self.api_local.toggled, self.api_port.valueChanged):
+            sig.connect(lambda *_: show())
+        show()
+
+    def _apply_api(self):
+        s = load_settings()
+        s["api"] = {"enabled": self.api_on.isChecked(), "port": self.api_port.value(),
+                    "localOnly": self.api_local.isChecked(), "token": self.api_token.text().strip()}
+        save_settings(s)
 
     def _show_mode(self):
         mc = bool(self.engine and self.engine.console_mode == "mc")
@@ -208,6 +269,7 @@ class SettingsDialog(QDialog):
     def apply(self):
         p = self.p
         set_auto_check(self.auto_update.isChecked())
+        self._apply_api()
         p.name = self.name.text().strip() or p.name
         p.vmix_host = self.host.text().strip() or "localhost"
         p.vmix_port = self.port.value()

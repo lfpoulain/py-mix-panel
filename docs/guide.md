@@ -262,6 +262,7 @@ où la source a été recréée, MixPanel la retrouve par son nom et met le prof
 | Protection fader | Délai pendant lequel le moteur ne suit pas vMix après un mouvement manuel |
 | Anneaux LED | Encodeurs libres = vu-mètre de leur tranche |
 | Modèle de tranche | Bus affectés aux 3 lignes de boutons quand on glisse une source sur une tranche |
+| Pilotage à distance | API Stream Deck pour py-livedeck : ouverture (fermée par défaut), port 5085, *Ce poste uniquement*, jeton facultatif. Voir [l'API Stream Deck](api.md) |
 
 ## 11. Catalogue des actions
 
