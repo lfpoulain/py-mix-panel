@@ -48,8 +48,9 @@ def main():
         sys.exit(f"Ajoute d'abord une section « ## {v} — AAAA-MM-JJ » dans CHANGELOG.md.")
 
     print("Tests…")
-    if subprocess.run([sys.executable, "tests/test_core.py"], cwd=ROOT, capture_output=True).returncode:
-        sys.exit("Les tests échouent : release annulée.")
+    for test in ("tests/test_core.py", "tests/test_deck.py"):
+        if subprocess.run([sys.executable, test], cwd=ROOT, capture_output=True).returncode:
+            sys.exit(f"Les tests échouent ({test}) : release annulée.")
 
     if args.dry_run:
         print(f"Tout est prêt pour la version {v} (dry-run : rien n'a été modifié).")

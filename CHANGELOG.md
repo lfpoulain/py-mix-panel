@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## 1.3.0 — 2026-11-23
 
 ### Pilotage depuis un Stream Deck (py-livedeck)
 - MixPanel expose l'**API Stream Deck commune** de l'écosystème (`/api/deck`, celle d'orchestream-v2) : py-livedeck dessine les touches que MixPanel décrit lui-même, avec leur état en direct.

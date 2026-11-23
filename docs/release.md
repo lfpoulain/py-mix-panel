@@ -22,7 +22,7 @@ Une release = un **installateur Windows** compilé automatiquement par GitHub Ac
 | Étape | Détail |
 |---|---|
 | Vérifications | Dépôt propre, tag inexistant, section `## 1.1.0` présente dans le CHANGELOG |
-| Tests | `tests/test_core.py` doit passer, sinon rien n'est publié |
+| Tests | `tests/test_core.py` et `tests/test_deck.py` doivent passer, sinon rien n'est publié |
 | Version | Met à jour `pymixpanel/__init__.py` et commite « Version 1.1.0 » |
 | Tag | Crée le tag annoté `v1.1.0` et pousse le commit et le tag |
 
