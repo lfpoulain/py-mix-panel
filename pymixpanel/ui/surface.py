@@ -15,7 +15,6 @@ from PySide6.QtGui import (QColor, QFont, QFontMetricsF, QLinearGradient, QPaint
 from PySide6.QtWidgets import QToolTip, QWidget
 
 from .. import actions as A
-from ..vmix import position_to_db
 from ..xtouch import BUTTON, ENCODER, FADER, PEDAL, TRANSPORT
 from . import theme as T
 
@@ -71,19 +70,6 @@ def build_geometry() -> dict[str, tuple]:
 def _layer_rect(k: int) -> QRectF:
     """Boutons LAYER A / B (bas du bloc de droite)."""
     return QRectF(RIGHT_X[k] - 40, FBTN_Y - 16, 80, 32)
-
-
-_DB_ACTIONS = {"volume", "master_volume", "bus_volume", "headphones_volume"}
-
-
-def _fader_text(action, v: float) -> str:
-    """Volume en dB, comme dans le mixeur vMix (0 dB en haut, -∞ en bas)."""
-    if action is None or action.key not in _DB_ACTIONS:
-        return f"{v * 100:.0f}"
-    db = position_to_db(v * 100)
-    if db == float("-inf") or db < -99:
-        return "-∞"
-    return f"{db:+.1f}" if db > -10 else f"{db:.0f}"
 
 
 def _color(engine, cid: str) -> QColor | None:
@@ -247,6 +233,14 @@ class SurfaceWidget(QWidget):
         f.setBold(bold)
         if spacing:
             f.setLetterSpacing(QFont.AbsoluteSpacing, spacing)
+        return f
+
+    def _fit_font(self, text: str, width: float, size: float) -> QFont:
+        """Police grasse de `size` points, réduite tant que `text` dépasse `width`."""
+        f = self._font(size, True)
+        while size > 5 and QFontMetricsF(f).horizontalAdvance(text) > width:
+            size -= 0.3
+            f = self._font(size, True)
         return f
 
     def _paint_body(self, p: QPainter):
@@ -484,7 +478,25 @@ class SurfaceWidget(QWidget):
             p.setPen(items[0][1])
             p.drawText(QRectF(c.x() - 46, c.y() + r, 92, 12), Qt.AlignCenter,
                        fm.elidedText(txt, Qt.ElideRight, 90))
+        self._paint_value(p, cid, c, r, col)
         self._missing_dot(p, cid, c + QPointF(r * 0.72, -r * 0.72))
+
+    def _paint_value(self, p: QPainter, cid: str, c: QPointF, r: float, col: QColor | None):
+        """Valeur lue dans vMix (« +12 dB »), en pastille dans l'ouverture de l'anneau."""
+        value = self.engine.value_text(cid)
+        if not value:
+            return
+        f = self._fit_font(value, 44, 6.8)
+        w = QFontMetricsF(f).horizontalAdvance(value) + 9
+        pill = QRectF(c.x() - w / 2, c.y() + r - 10.5, w, 12.5)
+        edge = QColor(col) if col is not None else QColor("#2a303b")
+        edge.setAlphaF(0.55)
+        p.setPen(QPen(edge, 1))
+        p.setBrush(QColor("#0f1115"))
+        p.drawRoundedRect(pill, 6, 6)
+        p.setFont(f)
+        p.setPen(QColor("#e6e9f0"))
+        p.drawText(pill, Qt.AlignCenter, value)
 
     def _paint_push(self, p: QPainter, cid: str, c: QPointF, r: float):
         e = self.engine
@@ -553,10 +565,13 @@ class SurfaceWidget(QWidget):
         p.drawRoundedRect(cap, 6, 6)
         p.setPen(QPen(col if col is not None else QColor("#8b93a5"), 2))
         p.drawLine(QPointF(cap.left() + 6, y), QPointF(cap.right() - 6, y))
-        if col is not None:
-            p.setFont(self._font(7.6, True))
-            p.setPen(QColor("#c9ceda"))
-            p.drawText(QRectF(x - 23, y - 15, 46, 13), Qt.AlignCenter, _fader_text(e.action_of(cid), v))
+        value = e.value_text(cid)
+        if value:
+            # valeur lue dans vMix, sur la moitié haute du curseur
+            f = self._fit_font(value, 42, 7.2)
+            p.setFont(f)
+            p.setPen(QColor("#e6e9f0"))
+            p.drawText(QRectF(x - 23, y - 15, 46, 14), Qt.AlignCenter, value)
         self._paint_strip_label(p, cid, x, col)
 
     def _paint_strip_label(self, p: QPainter, cid: str, x: float, col: QColor | None):
@@ -685,6 +700,9 @@ class SurfaceWidget(QWidget):
                     m = e.mapping(cid)
                     who = f" — {e.input_title(m)}" if A.needs_input(a) else ""
                     txt += f"<br>{a.label}{who}"
+                    value = e.value_text(cid)
+                    if value:
+                        txt += f"<br>Dans vMix : <b>{value}</b>"
                     if e.input_missing(m):
                         txt += f"<br><span style='color:{T.DANGER}'>Source introuvable dans vMix</span>"
                 else:

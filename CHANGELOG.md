@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.4.0 — 2026-11-23
+
+### La valeur vMix sur chaque fader et chaque encodeur
+- La surface affiche la **valeur réelle lue dans vMix** du paramètre que pilote chaque contrôle, avec son unité : sur le curseur des **faders** et dans une pastille sous l'anneau des **encodeurs**. Exemples : volume `-7.8 dB`, gain d'une source `+12 dB`, balance `G 40 %`.
+- La valeur suit vMix **en direct**, que le changement vienne de la X-Touch, de la souris ou du mixeur vMix. L'infobulle d'un contrôle la rappelle (« Dans vMix : +12 dB »).
+- Aucune valeur n'est inventée : rien ne s'affiche si vMix est déconnecté, si la source est introuvable ou sans audio, ni pour un contrôle libre, un encodeur cranté, un vu-mètre ou une fonction personnalisée (vMix ne publie pas sa valeur). Le curseur d'un fader associé à une fonction personnalisée n'affiche donc plus sa position.
+
 ## 1.3.0 — 2026-11-23
 
 ### Pilotage depuis un Stream Deck (py-livedeck)

@@ -2,14 +2,15 @@
 
 Une action continue (fader, encodeur, pédale) reçoit une valeur 0..1 ;
 une action « déclencheur » (bouton) s'exécute à l'appui. Chaque action sait
-aussi lire son état dans vMix pour allumer la LED / placer le fader.
+aussi lire son état dans vMix pour allumer la LED / placer le fader, et les
+actions continues savent l'écrire avec son unité (« -6.2 dB », « +12 dB »).
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Callable
 
-from .vmix import BUSES, VmixState, meter_norm
+from .vmix import BUSES, VmixState, meter_norm, position_to_db
 
 AUDIO, ROUTING, VIDEO, PROD, AUTO, CUSTOM = "audio", "routing", "video", "prod", "auto", "custom"
 
@@ -51,6 +52,7 @@ class Action:
     help: str = ""
     step: bool = False   # encodeur cranté : run() reçoit +n / -n crans au lieu d'une valeur
     engine: bool = False  # exécutée par le moteur (scènes, macros, ducking), pas par vMix
+    display: Callable | None = None    # (retour 0..1) -> valeur lisible avec son unité
 
 
 def _num(state: VmixState, p: dict) -> int:
@@ -67,6 +69,27 @@ def _input_fb(attr: Callable):
 
 def _vol(v: float) -> str:
     return f"{v * 100:.1f}".rstrip("0").rstrip(".")
+
+
+def db_text(v: float) -> str:
+    """Position de fader 0..1 -> dB, comme dans le mixeur vMix (0 dB en haut, -∞ en bas)."""
+    db = position_to_db(v * 100)
+    if db < -99:
+        return "-∞ dB"
+    if abs(db) < 0.05:
+        return "0 dB"
+    return f"{db:+.1f} dB" if db > -10 else f"{db:.0f} dB"
+
+
+def gain_text(v: float) -> str:
+    g = round(v * 24, 1)
+    return f"+{g:g} dB" if g > 0 else "0 dB"
+
+
+def balance_text(v: float) -> str:
+    """Centre, ou pourcentage vers la gauche (G) / la droite (D)."""
+    pct = round((v * 2 - 1) * 100)
+    return "Centre" if pct == 0 else f"{'G' if pct < 0 else 'D'} {abs(pct)} %"
 
 
 def _ellipsis(text: str, n: int = 12) -> str:
@@ -89,24 +112,28 @@ _add(Action(
     _input_fb(lambda i, p: i.volume / 100 if i.has_audio else None),
     lambda p, t: (t, "Volume"),
     "Le fader règle le volume de la source dans le mixeur vMix.",
+    display=db_text,
 ))
 _add(Action(
     "master_volume", "Volume Master", AUDIO, True, [],
     lambda p, v, st: [("SetMasterVolume", {"Value": _vol(v)}, "vol:master")],
     lambda p, st: st.master.volume / 100 if st.online else None,
     lambda p, t: ("MASTER", "Volume"),
+    display=db_text,
 ))
 _add(Action(
     "bus_volume", "Volume d'un bus", AUDIO, True, [Param("bus", "Bus", "bus", "A")],
     lambda p, v, st: [(f"SetBus{p.get('bus', 'A')}Volume", {"Value": _vol(v)}, f"vol:bus{p.get('bus')}")],
     lambda p, st: (st.buses[p.get("bus", "A")].volume / 100) if p.get("bus", "A") in st.buses else None,
     lambda p, t: (f"BUS {p.get('bus', 'A')}", "Volume"),
+    display=db_text,
 ))
 _add(Action(
     "headphones_volume", "Volume casque", AUDIO, True, [],
     lambda p, v, st: [("SetHeadphonesVolume", {"Value": _vol(v)}, "vol:phones")],
     lambda p, st: st.headphones / 100 if st.online else None,
     lambda p, t: ("CASQUE", "Volume"),
+    display=db_text,
 ))
 _add(Action(
     "balance", "Balance d'une source", AUDIO, True, [IN],
@@ -115,6 +142,7 @@ _add(Action(
     _input_fb(lambda i, p: (i.balance + 1) / 2 if i.has_audio else None),
     lambda p, t: (t, "Balance"),
     "Idéal sur un encodeur : gauche ↔ droite, centre = 50 %.",
+    display=balance_text,
 ))
 _add(Action(
     "gain", "Gain d'une source (0-24 dB)", AUDIO, True, [IN],
@@ -123,6 +151,7 @@ _add(Action(
     _input_fb(lambda i, p: i.gain / 24 if i.has_audio else None),
     lambda p, t: (t, "Gain"),
     "Préampli de la source, pratique sur un encodeur pour un micro trop faible.",
+    display=gain_text,
 ))
 _add(Action(
     "audio_toggle", "Activer / couper une source", AUDIO, False, [IN],

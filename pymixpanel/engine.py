@@ -224,6 +224,20 @@ class Engine(QObject):
             title = effect if a.key == "transition_effect" else (f"{dur} ms" if dur else "")
         return a.short(m, title) if a.short else (a.label, "")
 
+    def value_text(self, cid: str) -> str | None:
+        """Valeur réelle, lue dans vMix, du paramètre que pilote un fader ou un encodeur,
+        avec son unité (« -6.2 dB », « +12 dB », « G 40 % »). None quand il n'y a rien de sûr
+        à afficher : contrôle libre, vMix hors ligne, source introuvable ou sans audio,
+        paramètre que vMix ne publie pas."""
+        a, m = self.action_of(cid), self.mapping(cid)
+        if not a or not a.display or not a.feedback or not self.state.online:
+            return None
+        try:
+            fb = self._reconcile(a, m, a.feedback(m, self.state))
+        except Exception:
+            return None
+        return a.display(float(fb)) if fb is not None else None
+
     def assign_input(self, cid: str, input_key: str):
         """Glisser-déposer d'une source : association la plus logique."""
         if self.locked:

@@ -713,6 +713,58 @@ def test_ducking_without_setvolumefade(tmp_path):
     eng.vmix.stop()
 
 
+def test_value_text_shows_real_vmix_value(tmp_path):
+    """La surface affiche la valeur lue dans vMix (avec son unité), jamais une valeur inventée."""
+    from pymixpanel.actions import balance_text, db_text, gain_text
+    assert db_text(1.0) == "0 dB" and db_text(0.5) == "-24 dB" and db_text(0.0) == "-∞ dB"
+    assert db_text(0.9) == "-3.7 dB"
+    assert gain_text(0.0) == "0 dB" and gain_text(0.5) == "+12 dB" and gain_text(7 / 24) == "+7 dB"
+    assert balance_text(0.5) == "Centre" and balance_text(0.3) == "G 40 %" and balance_text(1.0) == "D 100 %"
+
+    eng, midi = setup_engine(tmp_path)
+    S = fake_vmix.S
+    try:
+        eng.set_mapping("enc1", {"action": "gain", "input": MIC1})
+        eng.set_mapping("enc2", {"action": "balance", "input": MUSIC})
+        eng.set_mapping("fader1", {"action": "volume", "input": MIC1})
+        eng.set_mapping("main", {"action": "master_volume"})
+        # valeurs changées dans vMix (pas depuis la X-Touch) : l'affichage suit
+        with fake_vmix.LOCK:
+            S["inputs"][MIC1]["gain"] = 9
+            S["inputs"][MIC1]["volume"] = 50.0
+            S["inputs"][MUSIC]["balance"] = -0.4
+        assert wait(lambda: eng.value_text("enc1") == "+9 dB"), eng.value_text("enc1")
+        assert wait(lambda: eng.value_text("fader1") == "-24 dB"), eng.value_text("fader1")
+        assert eng.value_text("enc2") == "G 40 %"
+        assert eng.value_text("main") == "0 dB"
+        # depuis la console : l'encodeur monte le gain, la valeur affichée est celle que vMix a prise
+        eng.on_midi(cc(10, 64))
+        eng.on_midi(cc(10, 68))                    # +4 crans = +4 % de 24 dB -> vMix arrondit à 10 dB
+        assert wait(lambda: S["inputs"][MIC1]["gain"] == 10)
+        assert wait(lambda: eng.value_text("enc1") == "+10 dB"), eng.value_text("enc1")
+        # rien à afficher : contrôle libre, bouton, encodeur cranté, vu-mètre, paramètre non publié,
+        # source sans audio ou introuvable
+        eng.set_mapping("enc3", {"action": "preview_nav"})
+        eng.set_mapping("enc4", {"action": "meter", "source": "master"})
+        eng.set_mapping("fader2", {"action": "custom_value", "function": "SetZoom", "query": "Value={value}"})
+        eng.set_mapping("fader3", {"action": "volume", "input": "0b8f6a3e-1111-4c1d-9a55-000000000010"})
+        eng.set_mapping("fader4", {"action": "volume", "input": "inconnue"})
+        eng.set_mapping("fader5", None)
+        for cid in ("enc3", "enc4", "fader2", "fader3", "fader4", "fader5", "enc5", "m1_1", "push1"):
+            assert eng.value_text(cid) is None, cid
+        # vMix hors ligne : plus aucune valeur
+        from pymixpanel.vmix import VmixState
+        eng.vmix.stop()
+        eng.on_state(VmixState())
+        for cid in ("enc1", "enc2", "fader1", "main"):
+            assert eng.value_text(cid) is None, cid
+    finally:
+        with fake_vmix.LOCK:
+            S["inputs"][MIC1].update(gain=0, volume=80.0)
+            S["inputs"][MUSIC]["balance"] = 0.0
+        eng.vmix.stop()
+
+
 if __name__ == "__main__":
     import tempfile
     for name, fn in list(globals().items()):

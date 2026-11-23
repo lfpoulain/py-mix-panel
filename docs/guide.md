@@ -53,6 +53,18 @@ En haut à droite, deux pastilles indiquent l'état des connexions :
 - **Bouton plein** = LED allumée (source active, envoyée sur le bus, scène en cours…).
 - **Barre au-dessus du fader** : 🔴 la source est au programme, 🟢 en preview.
 - **Vu-mètre** à droite de chaque fader, de -60 à 0 dB.
+- **Valeur vMix** : chaque fader (sur son curseur) et chaque encodeur (dans une pastille sous l'anneau) affiche la valeur
+  réelle du paramètre qu'il pilote, lue dans vMix et mise à jour en direct, que tu bouges la X-Touch ou le mixeur vMix.
+
+  | Action | Valeur affichée |
+  |---|---|
+  | Volume d'une source, du Master, d'un bus, du casque | En dB, comme dans le mixeur vMix : `0 dB`, `-7.8 dB`, `-∞ dB` |
+  | Gain d'une source | `+12 dB` (de 0 à 24 dB) |
+  | Balance d'une source | `Centre`, `G 40 %`, `D 40 %` |
+
+  Rien ne s'affiche quand il n'y a rien de sûr à montrer : vMix déconnecté, source introuvable ou sans audio, contrôle
+  libre, encodeur cranté, vu-mètre, ou fonction personnalisée (vMix ne publie pas sa valeur). Survole un contrôle :
+  l'infobulle rappelle la valeur (« Dans vMix : +12 dB »).
 - **Pastille rouge** : la source associée est introuvable dans vMix.
 
 ### Modes Édition et Live
@@ -115,7 +127,7 @@ associée. Sur la surface, la rotation est indiquée sous l'encodeur et l'appui 
 
 Il y a deux façons de tourner :
 
-- **Continue** (volume, balance, gain, volume d'un bus…) : l'anneau LED montre la valeur.
+- **Continue** (volume, balance, gain, volume d'un bus…) : l'anneau LED montre la valeur, et la surface l'écrit sous l'anneau avec son unité (« +12 dB »).
 - **Crantée** (anneau en pointillés) : chaque cran fait une action. L'encodeur est recentré à chaque cran, il ne bute donc jamais.
   - *Parcourir les sources en preview*
   - *Choisir l'effet d'une transition* (1 à 4)

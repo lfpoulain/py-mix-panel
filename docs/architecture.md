@@ -58,6 +58,10 @@ flowchart LR
 `Engine.refresh_feedback()` parcourt tous les contrôles à chaque nouvel état vMix, calcule la valeur
 attendue et n'envoie à la console **que ce qui a changé** (cache `_sent`).
 
+`Engine.value_text(cid)` donne la valeur lisible d'un fader ou d'un encodeur (« +12 dB ») : le retour de l'action,
+mis en forme par son champ `display`. La surface l'affiche telle quelle, et rien du tout quand elle vaut `None`
+(vMix hors ligne, source introuvable, action sans `display`).
+
 ### Ajouter une action
 
 Toutes les actions sont déclarées dans `actions.py` :
@@ -126,6 +130,7 @@ puis vérifie de bout en bout :
 | `test_lost_final_command_is_resent` | vMix perd la fin d'une rafale : la position du fader lui est renvoyée, le moteur ne « corrige » pas |
 | `test_final_position_sent_twice` | Au relâchement après un geste, la position finale part deux fois vers vMix |
 | `test_ring_shows_push_state` | Anneau témoin de l'appui : plein (27), éteint, clignotant (28), pendant l'appui pour une action sans état |
+| `test_value_text_shows_real_vmix_value` | Valeur vMix affichée sur les faders et encodeurs (dB, gain, balance), rien si hors ligne ou non lisible |
 | `test_ducking_without_setvolumefade` | Ducking fonctionnel même si SetVolumeFade ne fait rien (fondu fait par MixPanel) |
 | `test_console_mode_mc_and_back` | Mode Mackie : MixPanel en pause (ni actions, ni retours), puis retour au mode standard |
 
